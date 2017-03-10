@@ -1,0 +1,35 @@
+\documentclass[twoside]{homework}
+
+\usepackage{dsfont}
+
+\studname{Si Kai Lee}
+\uni{sl3950}
+\studmail{sl3950@columbia.edu}
+\coursename{Bayesian Models for Machine Learning}
+\hwNo{4}
+
+\begin{document}
+\maketitle
+
+\section*{Problem 1}
+\subsection*{b}
+As $K$ increases, the log likelihood increases. As we are running maximum likelihood-EM, increasing the number of clusters leads to an increase log likelihood as each point becomes closer to a cluster which leads to overfitting. If we carry out model selection using log likelihood as the criteria, we would select the model with the same number of clusters as points. 
+
+\subsection*{c}
+The number of clusters increases as the $K$ defined increases. However, at $K=8$ and $K=10$ the clusters become more arbitrary which suggests overfitting. 
+
+\newpage
+
+ \section*{Problem 2}
+ \subsection*{b}
+ The variational objective function peaks at $K=4$. The phenomenon might indicate that log likelihood might be a possible criteria to use for model selection in VI-GMM.
+ 
+ \subsection*{b}
+The number of clusters increases with $K$ till $K=4$ and stays at 4 for higher values of $K$.
+
+\newpage
+
+ \section*{Problem 3}
+ 
+ 
+ \end{document}

@@ -1,0 +1,110 @@
+\documentclass[twoside]{homework}
+
+\usepackage{dsfont} 
+
+\studname{Si Kai Lee}
+\uni{sl3950}
+\studmail{sl3950@columbia.edu}
+\coursename{Bayesian Models for Machine Learning}
+\hwNo{3}
+
+\begin{document}
+\maketitle
+
+\section*{Problem 1}
+We want to find the distribution $q(w, \alpha_{1:d}, \lambda) = q(w) q(\lambda) \prod_{k=1}^d q(\alpha_k)$ that best approximates $p(w, \alpha_{1:d}, \lambda | Y,  X)$. Assume that $p(w, \alpha_{1:d}, \lambda | Y,  X) = p(Y | w, \alpha_{1:n}, \lambda, X) p(w | \alpha_{1:n}) p(\lambda) \prod_{k=1}^d p(\alpha_k)$.
+
+\subsection*{a}
+We find the optimal distribution for each $q$ distribution.
+\begin{align*}
+q(\lambda) 
+&\propto \exp \left\{ \mathbb{E}_{-q(\lambda)}[\ln p(Y | w, \alpha_{1:n}, \lambda, X)] + \ln q(\lambda) \right\} \\
+&\propto \exp \left\{ \mathbb{E}_{q(w)}[\frac{n}{2} \ln \lambda - \frac{\lambda}{2}(Y - X^T w)^T(Y - X^T w)] + (e_0 -1)\ln \lambda - f_0 \lambda \right\} \\
+&\propto \exp \left\{(\frac{n}{2} + e_0 -1)\ln \lambda - \frac{1}{2}(Y^T  Y - 2 Y^T X^T \mathbb{E}_{q(w)}[w] + tr(\mathbb{E}_{q(w)}[w w^T] X X ^T) + 2f_0) \lambda \right\} \\
+&= Gamma(e_0', f_0') \textrm{ where }  e_0' = \frac{n}{2} + e_0,\ f_0' = \frac{1}{2}(Y^T  Y - 2 Y^T X^T \mathbb{E}_{q(w)}[w] + tr(\mathbb{E}_{q(w)}[w w^T] X X ^T) + 2f_0)\\
+q(\alpha_k) 
+&\propto \exp \left\{ \mathbb{E}_{-q(\alpha_k)}[\ln p(w_k | \alpha_k)] + \ln q(\alpha_k) \right\} \\
+&\propto \exp \left\{ \mathbb{E}_{q(w_k)}[\frac{1}{2} \ln \alpha_k - \frac{\alpha_k}{2}(w_k^2)] + (a_0 -1)\ln \alpha_k - b_0 \alpha_k \right\} \\
+&\propto \exp \left\{(\frac{1}{2} + a_0 -1)\ln \alpha_k - \frac{1}{2}(\mathbb{E}_{q(w_k)}[w_k^2] + 2b_0) \alpha_k \right\} \\
+&= Gamma(a_0^{(k)'}, b_0^{(k)'}) \textrm{ where }  a_0^{(k)'} = \frac{1}{2} + a_0,\ b_0^{(k)'} = \frac{1}{2}(\mathbb{E}_{q(w_k)}[w_k^2] + 2b_0)\\
+q(w)
+&\propto \exp \left\{ \mathbb{E}_{-q(w)}[\ln p(Y | w, \alpha_{1:n}, \lambda, X) + \ln q(w)] \right\} \\
+&\propto \exp \left\{ \mathbb{E}_{q(\lambda)}[- \frac{\lambda}{2}(Y - X^T w)^T(Y - X^T w)] + \mathbb{E}_{q(\alpha_{1:d})}[- \frac{A}{2}W^T W) \right\} \textrm{ where } A = diag(\alpha_1, ..., \alpha_d)  \\
+&\propto \exp \left\{ -\frac{1}{2} w^T \underbrace{(\mathbb{E}_{q(\lambda)}[\lambda] X X^T + \mathbb{E}_{q(\alpha_{1:d})}[A])}_{M} w - 2w^T \mathbb{E}_{q(\lambda)}[\lambda] X Y \right\}\\
+&\propto \exp \left\{ -\frac{1}{2}(w^T M  w - 2w^T M \mathbb{E}_{q(\lambda)}[\lambda] M^{-1} X Y + (\mathbb{E}_{q(\lambda)}[\lambda] M^{-1} X Y)^T M (\mathbb{E}_{q(\lambda)}[\lambda] M^{-1} X Y)) \right\} \\
+&= \mathcal{N}(\mathbb{E}_{q(\lambda)}[\lambda] M^{-1} X Y, M^{-1})
+\end{align*}
+The following expectations are defined to allow the $q$ distributions to be updated:
+\begin{itemize}
+\item $\mathbb{E}_{q(w)}[w] = \mathbb{E}_{q(\lambda)}[\lambda] M^{-1} X Y$
+\item $\mathbb{E}_{q(w_k)}[w_k^2] = (\mathbb{E}_{q(w)}[w])_k^2 + M^{-1}_{kk}$
+\item $\mathbb{E}_{q(w)}[w w^T] = M^{-1} + \mathbb{E}_{q(w)}[w] \mathbb{E}_{q(w)}[w]^T$
+\item $\mathbb{E}_{q(\lambda)}[\lambda] = e_0' / f_0'$
+\item $\mathbb{E}_{q(\alpha_{1:d})}[A] = diag(a_0^{(1)'} / b_0^{(1)'}, ..., a_0^{(d)'} / b_0^{(d)'})$
+\end{itemize}
+
+\subsection*{b}
+\textbf{\underline{A VI algorithm for Bayesian Regression}}
+\begin{enumerate}
+\item Initialise $a_0', b_0', e_0', f_0', \mu_0'$ and $\Sigma_0'$.
+\item For iteration $t= 1, ..., T$:
+\begin{enumerate}
+\item Update $q(\lambda)$ by setting
+	\begin{itemize} 
+	\item $e_t' = \frac{n}{2} + e_0$
+	\item $f_t' = \frac{1}{2}(Y^T  Y - 2 Y^T X^T \mathbb{E}_{q(w)}[w_t] + tr(\mathbb{E}_{q(w)}[w_t w_t^T] X X ^T) + 2f_0)$ 
+	\end{itemize}
+where $\mathbb{E}_{q(w)}[w_t] = \mu_{t-1}$ and $\mathbb{E}_{q(w)}[w_t w_t^T] = \Sigma_{t-1} + \mathbb{E}_{q(w)}[w_t] \mathbb{E}_{q(w)}[w_t]^T$
+\item Update each $q(\alpha_k)$ by setting 
+	\begin{itemize}
+	 \item $a_{t}^{(k)'} = \frac{1}{2} + a_0$
+	 \item $b_{t}^{(k)'} = \frac{1}{2}(\mathbb{E}_{q(w_k)}[{w_k^2}_t] + 2b_0)$
+	\end{itemize}
+where $\mathbb{E}_{q(w_k)}[{w_k^2}_t] = (\mathbb{E}_{q(w)}[w_t])_k^2 + (\Sigma_{t-1})_{kk}$
+\item Update $q(w)$ by setting
+	\begin{itemize}
+	\item $M_{t}' = (\mathbb{E}_{q(\lambda)}[\lambda_t] X X^T + \mathbb{E}_{q(\alpha_{1:d})}[A_t])$
+	\item $\Sigma_t' = M_t^{-1}$
+	\item $\mu_t' =  \mathbb{E}_{q(\lambda)}[\lambda_t] M_{t}^{-1} X Y$
+	\end{itemize}
+where $\mathbb{E}_{q(\lambda)}[\lambda_t] = e_{t}' / f_{t}'$ and $\mathbb{E}_{q(\alpha_{1:d})}[A_t] = diag(a_{t}^{(1)'} / b_{t}^{(1)'}, ..., a_{t}^{(d)'} / b_{t}^{(d)'})$
+
+\item Assess convergence by calculating $\mathcal{L}(a_t', b_t', e_t', f_t', \mu_t', \Sigma_t')$
+\end{enumerate}
+\end{enumerate}
+
+\subsection*{c}
+\begin{align*}
+&\mathcal{L}((a_t^{(1)'}, b_t^{(1)'}), ..., (a_t^{(d)'}, a_t^{(d)'}), e_t', f_t', \mu_t', \Sigma_t')\\
+&= \int_w \int_\lambda \int_{\alpha_{1:d}} q(w) q(\lambda) \prod_{k=1}^d q(\alpha_k) \ln \frac{p(w, \alpha_{1:d}, \lambda | Y,  X)}{q(w) q(\lambda) \prod_{k=1}^d q(\alpha_k)} d\alpha_{1:d} d\lambda dw \\
+&= \int_w \int_{\alpha_{1:d}} q(w) \ln p(w) d\alpha_{1:d} dw +  \int_\lambda q(\lambda) \ln p(\lambda) d\lambda + \int_{\alpha_{1:d}} \prod_{k=1}^d q(\alpha_k) \ln p(\alpha_k) d\alpha_{1:d} + \\
+& \int_w \int_\lambda q(w) q(\lambda) \ln p(Y | w, \lambda, X) d\lambda dw - \int_w q(w) \ln q(w) dw -  \int_\lambda q(\lambda) \ln q(\lambda) d\lambda - \int_{\alpha_{1:d}} \prod_{k=1}^d q(\alpha_k) \ln q(\alpha_k) d\alpha_{1:d}
+\end{align*}
+As the above equation is complicated, we look at each term individually.
+\begin{align*}
+\int_w \int_{\alpha_{1:d}} q(w) \ln p(w) dw 
+&=  -\frac{d}{2} \ln 2\pi + \frac{1}{2} \sum_{i=k}^d \mathbb{E}_{\alpha_{1:d}} [\ln \alpha_k] - \frac{1}{2} \mathbb{E}_{q(w), q(\alpha_{1:d})}[w_t^T A w_t] \\
+&= -\frac{d}{2} \ln 2\pi + \frac{1}{2} \sum_{i=k}^d (\psi(a_t^{(k)'}) - \ln b_t^{(k)'}) - \frac{1}{2} tr((\mu_t' {\mu_t'}^T + \Sigma_t') \mathbb{E}_{q(\alpha_{1:d})}A) \\
+\int_\lambda q(\lambda) \ln p(\lambda) d\lambda
+&= e_0 \ln f_0 - \ln \Gamma(e_0) + (e_0 - 1) \mathbb{E}_{q(\lambda)}[\ln \lambda] - f_0 \mathbb{E}_{q(\lambda)}[\lambda]\\
+&= e_0 \ln f_0 - \ln \Gamma(e_0) + (e_0 - 1)(\psi(e_t') - \ln f_t') - f_0\frac{e_t'}{f_t'}\\
+\int_{\alpha_{1:d}} \prod_{k=1}^d q(\alpha_k) \ln p(\alpha_k) d\alpha_{1:d}
+&= \sum_{k=1}^d \int_{\alpha_k} (\alpha_k) \ln p(\alpha_k) d\alpha_k\\
+&= \sum_{k=1}^d a_0 \ln b_0 - \ln \Gamma(a_0) + (a_0 - 1)(\psi(a_t^{(k)'}) - \ln b_t^{(k)'}) - b_0 \frac{a_t^{(k)'}}{b_t^{(k)'}} \\
+% Entropy
+\int_w q(w) \ln q(w) dw 
+&=  \frac{1}{2} \ln((2 \pi e)^n | \Sigma_t |)\\
+\int_\lambda q(\lambda) \ln q(\lambda) d\lambda
+&= e_t' \ln f_t' - \ln \Gamma(e_t') + (e_t' - 1)(\psi(e_t') - \ln f_t') - f_t'\frac{e_t'}{f_t'}\\
+&= \ln f_t' - \ln \Gamma(e_t') + (e_t' - 1)\psi(e_t') - e_t'\\
+\int_{\alpha_{1:d}} \prod_{k=1}^d q(\alpha_k) \ln q(\alpha_k) d\alpha_{1:d}
+&= \sum_{k=1}^d \ln b_t^{(k)'} - \ln \Gamma(a_t^{(k)'}) + (a_t^{(k)'} - 1)\psi(a_t^{(k)'}) - a_t^{(k)'}\\
+\end{align*}
+And lastly,
+\begin{align*}
+&\int_w \int_\lambda q(w) q(\lambda) \ln p(Y | w, \lambda, X) d\lambda dw\\
+&=  -\frac{n}{2} \ln 2\pi + \frac{n}{2} \mathbb{E}_{q(\lambda)}[\ln \lambda] - \frac{\mathbb{E}_{q(\lambda)}[\lambda]}{2} \mathbb{E}_{q(w)}[(Y - X^Tw)^T (Y - X^Tw)]\\
+&= -\frac{n}{2} \ln 2\pi + \frac{n}{2}(\psi(e_t') - \ln f_t') - \frac{e_t'}{2f_t'}(Y^T Y - 2 Y^T X^T \mu_t' - tr((\Sigma_t' + \mu_t' {\mu_t'}^T) X X^T)) \\
+\end{align*}
+
+\end{document}
